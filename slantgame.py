@@ -195,16 +195,23 @@ def remove_vertices(size, vertices, diff):
             to_remove = random.choice(list(edges.keys()))
             edges.pop(to_remove)
             total -= 1
+            
+        print('edges')
+        print(edges)
         
         # remove inner hints to reach goal
         percent = random.choice((0.36, 0.37, 0.38, 0.39, 0.4))
         total_remaining = int(len(vertices)*2*percent)
         chosen = sum(value[x] for x in list(edges.values()))
         remaining = total_remaining - chosen
-        total = len(vertices)*2 - chosen
+        total = len(vertices)*2
+        print(percent, total_remaining, chosen, remaining, total)
         while not total <= remaining:
+            print(new_vertices)
             to_remove = random.choice(list(new_vertices.keys()))
             total -= value[new_vertices.pop(to_remove)]
+            print(vertices[to_remove])
+            print(total)
             
     elif diff == "easy":
         pass
