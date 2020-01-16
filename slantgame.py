@@ -34,7 +34,9 @@ def in_button(pos, x, y, width, height):
         return True
     return False
 
-def get_click(pos, x, y, spacex, spacey):
+def get_clicked_node(pos, x, y, spacex, spacey):
+    i = int((pos[0] - x)/spacex)
+    j = int((pos[1] - y)/spacey)
     return (i, j)
 
 def make_grid(size, diff, cell = None, grid = None):
@@ -198,11 +200,16 @@ def remove_vertices(size, vertices, diff):
             total -= 1
         
         # remove inner hints to reach goal
-        percent = random.choice((0.36, 0.37, 0.38, 0.39, 0.4))
+        percent = random.choice((0.48, 0.5, 0.52, 0.54))
         total_values = sum(value[x] for x in vertices.values()) - edge_values
         total_remaining = int(total_values*percent)
         remaining = total_remaining 
-        while not total_values <= remaining:
+        print(percent)
+        print(edges)
+        edge_values = sum(value[x] for x in edges.values())
+        print(remaining)
+        print(edge_values)
+        while not total_values <= remaining + edge_values:
             to_remove = random.choice(list(new_vertices.keys()))
             total_values -= value[new_vertices.pop(to_remove)]
             
@@ -287,33 +294,24 @@ def play(size, diff):
     player_grid = []
     for i in range(size[1]):
         player_grid.append([0]*size[0])
-    
-    playing = True
-    while playing:
-        displayScreen.fill(lightpurple)
-        # draw the board
+        
+    # init constants 
         spacex = 320/size[0]
         spacey = 320/size[1]
+        line_width = spacex - 10
+        line_height = spacey - 10
+        
+    # draw board
+        displayScreen.fill(lightpurple)
         for i in range(size[0]+1):
             x = 140 + i*spacex
             pygame.draw.line(displayScreen,black,(x,200),(x,520),2)
         for i in range(size[1]+1):
             y = 200 + i*spacey
             pygame.draw.line(displayScreen,black,(140,y),(460,y),2)
-        
-#        # draw the lines
-#        line_width = spacex - 10
-#        line_height = spacey - 10
-#        for i in range (size[0]):
-#            for j in range(size[1]):
-#                x = 145 + i*spacex
-#                y = 205 + j*spacey
-#                if grid[j][i] == 1:
-#                    pygame.draw.line(displayScreen,black,(x,y+line_height),(x+line_width,y),1)
-#                else:
-#                    pygame.draw.line(displayScreen,black,(x,y),(x+line_width,y+line_height),1)
-                    
-        # draw the hints:
+    
+    playing = True
+    while playing:
         for vertex in vertices:
             pygame.draw.circle(displayScreen,lightpurple,(140 + int(spacex*vertex[0]),200 + int(spacey*vertex[1])),10,0)
             pygame.draw.circle(displayScreen,black,(140 + int(spacex*vertex[0]),200 + int(spacey*vertex[1])),10,1)
@@ -327,9 +325,30 @@ def play(size, diff):
             if event.type ==pygame.QUIT:
                 playing = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                pass
+                pos = pygame.mouse.get_pos()
+                # check if in grid
+                if pos[0] >= 140 and pos[0] <= 459 and pos[1] >= 200 and pos[1] <= 519:
+                    # get box that was clicked
+                    (i, j) = get_clicked_node(pos, 140, 200, spacex, spacey)
+                    if player_grid[j][i] == 0:
+                        x = 145 + i*spacex
+                        y = 205 + j*spacey
+                        pygame.draw.line(displayScreen,black,(x,y+line_height),(x+line_width,y),1)
+                        player_grid[j][i] = 1                            
+                    elif player_grid[j][i] == 1:
+                        x = 145 + i*spacex
+                        y = 205 + j*spacey
+                        pygame.draw.line(displayScreen,lightpurple,(x,y+line_height),(x+line_width,y),2)
+                        pygame.draw.line(displayScreen,black,(x,y),(x+line_width,y+line_height),1)
+                        player_grid[j][i] = 2
+                    elif player_grid[j][i] == 2:
+                        x = 145 + i*spacex
+                        y = 205 + j*spacey
+                        pygame.draw.line(displayScreen,lightpurple,(x,y),(x+line_width,y+line_height),2)
+                        player_grid[j][i] = 0
                 
         pygame.display.flip()
+        
 
 start()
 pygame.quit()
