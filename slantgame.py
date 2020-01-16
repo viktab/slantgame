@@ -23,7 +23,7 @@ green = (52,206,67)
 red = (255,0,0)
 orange = (255,128,0)
 purple = (153,51,255)
-lightpurple = (190,170,215)
+lightpurple = (200,185,235)
 blue1 = (0,76,153)
 blue2 = (51,255,255)
 indigo = (75,0,130)
@@ -92,23 +92,24 @@ def make_grid(size, diff, cell = None, grid = None):
 
 def no_loops(size, grid, cell):
     graph = make_graph(size, grid)
-    return not cycles(graph, cell)
+    return cycles(graph, cell) is None
     
-def cycles(graph, node = None, path = None):
+def cycles(graph, node, path = None):
     # checks for cycles
     for neighb in graph[node]:
         if path is not None and (neighb == path[-2] or neighb in graph[path[-2]]):
             continue
         if path is not None and neighb in path:
-            return True
+            return path
         if path is None:
             new_path = [node, neighb]
         else:
             new_path = path.copy()
             new_path.append(neighb)
-        if cycles(graph, neighb, new_path):
-            return True
-    return False
+        cycle = cycles(graph, neighb, new_path)
+        if cycle is not None:
+            return cycle
+    return None
     
 def make_graph(size, grid):
     graph = {}
@@ -289,6 +290,7 @@ def play(size, diff):
     grid = make_grid(size, diff)
     vertices = make_vertices(size, grid)
     vertices = remove_vertices(size, vertices, diff)
+    print(grid)
     
     # init game
     player_grid = []
@@ -296,19 +298,45 @@ def play(size, diff):
         player_grid.append([0]*size[0])
         
     # init constants 
-        spacex = 320/size[0]
-        spacey = 320/size[1]
-        line_width = spacex - 10
-        line_height = spacey - 10
-        
+    spacex = 320/size[0]
+    spacey = 320/size[1]
+    line_width = spacex - 10
+    line_height = spacey - 10
+    reds = []
+    
     # draw board
-        displayScreen.fill(lightpurple)
-        for i in range(size[0]+1):
-            x = 140 + i*spacex
-            pygame.draw.line(displayScreen,black,(x,200),(x,520),2)
-        for i in range(size[1]+1):
-            y = 200 + i*spacey
-            pygame.draw.line(displayScreen,black,(140,y),(460,y),2)
+    displayScreen.fill(lightpurple)
+    for i in range(size[0]+1):
+        x = 140 + i*spacex
+        pygame.draw.line(displayScreen,black,(x,200),(x,520),2)
+    for i in range(size[1]+1):
+        y = 200 + i*spacey
+        pygame.draw.line(displayScreen,black,(140,y),(460,y),2)
+        
+    # func in game 
+    def check_cycles(cell, added):
+        graph = make_graph(size, player_grid)
+        cycle = cycles(graph, cell)
+        if cycle is not None:
+            for red_cell in cycle:
+                (i, j) = red_cell
+                x = 145 + i*spacex
+                y = 205 + j*spacey
+                if player_grid[j][i] == 1:
+                    if added:
+                        pygame.draw.line(displayScreen,red,(x,y+line_height),(x+line_width,y),2)
+                    elif red_cell != cell:
+                        pygame.draw.line(displayScreen,black,(x,y+line_height),(x+line_width,y),2)
+                else:
+                    if added:
+                        pygame.draw.line(displayScreen,red,(x,y),(x+line_width,y+line_height),2)
+                    elif red_cell != cell:
+                        pygame.draw.line(displayScreen,black,(x,y),(x+line_width,y+line_height),2)
+                if added:
+                    reds.append(red_cell)
+            if not added:
+                for cell in cycle:
+                    reds.remove(cell)
     
     playing = True
     while playing:
@@ -317,7 +345,7 @@ def play(size, diff):
             pygame.draw.circle(displayScreen,black,(140 + int(spacex*vertex[0]),200 + int(spacey*vertex[1])),10,1)
             fontTitle = pygame.font.SysFont('Arial', 20)
             textTitle = fontTitle.render(str(vertices[vertex]),False,black)
-            textleft = 140 + int(spacex*vertex[0])-(textTitle.get_width()/2)
+            textleft = 141 + int(spacex*vertex[0])-(textTitle.get_width()/2)
             texttop = 200 + int(spacey*vertex[1])-(textTitle.get_height()/2)
             displayScreen.blit(textTitle,(textleft,texttop))
         
@@ -333,18 +361,22 @@ def play(size, diff):
                     if player_grid[j][i] == 0:
                         x = 145 + i*spacex
                         y = 205 + j*spacey
-                        pygame.draw.line(displayScreen,black,(x,y+line_height),(x+line_width,y),1)
-                        player_grid[j][i] = 1                            
+                        pygame.draw.line(displayScreen,black,(x,y+line_height),(x+line_width,y),2)
+                        player_grid[j][i] = 1
+                        check_cycles((i, j), True)                           
                     elif player_grid[j][i] == 1:
                         x = 145 + i*spacex
                         y = 205 + j*spacey
-                        pygame.draw.line(displayScreen,lightpurple,(x,y+line_height),(x+line_width,y),2)
-                        pygame.draw.line(displayScreen,black,(x,y),(x+line_width,y+line_height),1)
+                        pygame.draw.line(displayScreen,lightpurple,(x,y+line_height),(x+line_width,y),3)
+                        pygame.draw.line(displayScreen,black,(x,y),(x+line_width,y+line_height),2)
+                        check_cycles((i, j), False) 
                         player_grid[j][i] = 2
+                        check_cycles((i, j), True)
                     elif player_grid[j][i] == 2:
                         x = 145 + i*spacex
                         y = 205 + j*spacey
-                        pygame.draw.line(displayScreen,lightpurple,(x,y),(x+line_width,y+line_height),2)
+                        pygame.draw.line(displayScreen,lightpurple,(x,y),(x+line_width,y+line_height),3)
+                        check_cycles((i, j), False) 
                         player_grid[j][i] = 0
                 
         pygame.display.flip()
