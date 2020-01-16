@@ -34,6 +34,9 @@ def in_button(pos, x, y, width, height):
         return True
     return False
 
+def get_click(pos, x, y, spacex, spacey):
+    return (i, j)
+
 def make_grid(size, diff, cell = None, grid = None):
     # init
     if cell is None:
@@ -179,39 +182,31 @@ def remove_vertices(size, vertices, diff):
     for vertex in vertices:
         if vertex in edges:
             new_vertices.pop(vertex)
-            
-    print(new_vertices)
     
     # 36 - 40% remaining out of total (# vertices * 2)
     # 15% - 30% of outside must be filled
-    # can have 4% 4s and 0s
     if diff == "hard":
         # remove edge hints first
         percent = random.uniform(0.15, 0.3)
         remaining = int((size[0]*2 + size[1]*2)*percent)
         total = size[0]*2 + size[1]*2
+        edge_values = sum(value[x] for x in edges.values())
         
         while not total < remaining:
             to_remove = random.choice(list(edges.keys()))
             edges.pop(to_remove)
             total -= 1
-            
-        print('edges')
-        print(edges)
         
         # remove inner hints to reach goal
         percent = random.choice((0.36, 0.37, 0.38, 0.39, 0.4))
-        total_remaining = int(len(vertices)*2*percent)
-        chosen = sum(value[x] for x in list(edges.values()))
-        remaining = total_remaining - chosen
-        total = len(vertices)*2
-        print(percent, total_remaining, chosen, remaining, total)
-        while not total <= remaining:
-            print(new_vertices)
+        total_values = sum(value[x] for x in vertices.values()) - edge_values
+        total_remaining = int(total_values*percent)
+        remaining = total_remaining 
+        while not total_values <= remaining:
             to_remove = random.choice(list(new_vertices.keys()))
-            total -= value[new_vertices.pop(to_remove)]
-            print(vertices[to_remove])
-            print(total)
+            total_values -= value[new_vertices.pop(to_remove)]
+            
+        new_vertices.update(edges)
             
     elif diff == "easy":
         pass
@@ -287,8 +282,11 @@ def play(size, diff):
     grid = make_grid(size, diff)
     vertices = make_vertices(size, grid)
     vertices = remove_vertices(size, vertices, diff)
-    print(grid)
-    print(vertices)
+    
+    # init game
+    player_grid = []
+    for i in range(size[1]):
+        player_grid.append([0]*size[0])
     
     playing = True
     while playing:
@@ -303,17 +301,17 @@ def play(size, diff):
             y = 200 + i*spacey
             pygame.draw.line(displayScreen,black,(140,y),(460,y),2)
         
-        # draw the lines
-        line_width = spacex - 10
-        line_height = spacey - 10
-        for i in range (size[0]):
-            for j in range(size[1]):
-                x = 145 + i*spacex
-                y = 205 + j*spacey
-                if grid[j][i] == 1:
-                    pygame.draw.line(displayScreen,black,(x,y+line_height),(x+line_width,y),1)
-                else:
-                    pygame.draw.line(displayScreen,black,(x,y),(x+line_width,y+line_height),1)
+#        # draw the lines
+#        line_width = spacex - 10
+#        line_height = spacey - 10
+#        for i in range (size[0]):
+#            for j in range(size[1]):
+#                x = 145 + i*spacex
+#                y = 205 + j*spacey
+#                if grid[j][i] == 1:
+#                    pygame.draw.line(displayScreen,black,(x,y+line_height),(x+line_width,y),1)
+#                else:
+#                    pygame.draw.line(displayScreen,black,(x,y),(x+line_width,y+line_height),1)
                     
         # draw the hints:
         for vertex in vertices:
@@ -325,9 +323,12 @@ def play(size, diff):
             texttop = 200 + int(spacey*vertex[1])-(textTitle.get_height()/2)
             displayScreen.blit(textTitle,(textleft,texttop))
         
-        for event in pygame.event.get():
-                if event.type ==pygame.QUIT:
-                    playing = False
+        for event in pygame.event.get():            
+            if event.type ==pygame.QUIT:
+                playing = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                pass
+                
         pygame.display.flip()
 
 start()
