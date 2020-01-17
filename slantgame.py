@@ -286,23 +286,71 @@ def start():
         
 def play(size, diff):
     
+    # update red hints
+    def check_hints(cell, orientation):
+        (i, j) = cell
+        if orientation == 1:
+            player_vertices[(i+1, j)] += 1
+            player_vertices[(i, j+1)] += 1
+        elif orientation == 2:
+            player_vertices[(i, j)] += 1
+            player_vertices[(i+1, j+1)] += 1
+            player_vertices[(i+1, j)] -= 1
+            player_vertices[(i, j+1)] -= 1
+        else:
+            player_vertices[(i, j)] -= 1
+            player_vertices[(i+1, j+1)] -= 1
+        
+        hints_copy = copy.deepcopy(red_hints)
+        for m in range(i, i+2):
+            for n in range(j, j+2):
+                # check if made a mistake
+                if player_vertices[(m, n)] > correct_vertices[(m, n)] and (m, n) not in hints_copy and (m, n) in vertices:
+                    red_hints.append((m, n))
+                # check if fixed a mistake
+                if player_vertices[(m, n)] == correct_vertices[(m, n)] and (m, n) in hints_copy and (m, n) in vertices:
+                    red_hints.remove((m, n))
+        # show updated red hints
+        for hint in red_hints:
+            pygame.draw.circle(displayScreen,lightpurple,(140 + int(spacex*hint[0]),200 + int(spacey*hint[1])),10,0)
+            pygame.draw.circle(displayScreen,red,(140 + int(spacex*hint[0]),200 + int(spacey*hint[1])),10,1)
+            fontTitle = pygame.font.SysFont('Arial', 20)
+            textTitle = fontTitle.render(str(correct_vertices[hint]),False,red)
+            textleft = 141 + int(spacex*hint[0])-(textTitle.get_width()/2)
+            texttop = 200 + int(spacey*hint[1])-(textTitle.get_height()/2)
+            displayScreen.blit(textTitle,(textleft,texttop))
+        # show updated black hints
+        for vertex in vertices:
+            if vertex not in red_hints:
+                pygame.draw.circle(displayScreen,lightpurple,(140 + int(spacex*vertex[0]),200 + int(spacey*vertex[1])),10,0)
+                pygame.draw.circle(displayScreen,black,(140 + int(spacex*vertex[0]),200 + int(spacey*vertex[1])),10,1)
+                fontTitle = pygame.font.SysFont('Arial', 20)
+                textTitle = fontTitle.render(str(vertices[vertex]),False,black)
+                textleft = 141 + int(spacex*vertex[0])-(textTitle.get_width()/2)
+                texttop = 200 + int(spacey*vertex[1])-(textTitle.get_height()/2)
+                displayScreen.blit(textTitle,(textleft,texttop))
+    
     # generate a board
     grid = make_grid(size, diff)
-    vertices = make_vertices(size, grid)
-    vertices = remove_vertices(size, vertices, diff)
+    correct_vertices = make_vertices(size, grid)
+    vertices = remove_vertices(size, correct_vertices, diff)
     print(grid)
     
     # init game
     player_grid = []
     for i in range(size[1]):
         player_grid.append([0]*size[0])
+    player_vertices = {}
+    for vertex in correct_vertices:
+        player_vertices[vertex] = 0
         
     # init constants 
     spacex = 320/size[0]
     spacey = 320/size[1]
-    line_width = spacex - 10
-    line_height = spacey - 10
-    reds = []
+    line_width = spacex - 14
+    line_height = spacey - 14
+    red_slants = []
+    red_hints = []
     
     # draw board
     displayScreen.fill(lightpurple)
@@ -320,8 +368,8 @@ def play(size, diff):
         if cycle is not None:
             for red_cell in cycle:
                 (i, j) = red_cell
-                x = 145 + i*spacex
-                y = 205 + j*spacey
+                x = 147 + i*spacex
+                y = 207 + j*spacey
                 if player_grid[j][i] == 1:
                     if added:
                         pygame.draw.line(displayScreen,red,(x,y+line_height),(x+line_width,y),2)
@@ -333,22 +381,23 @@ def play(size, diff):
                     elif red_cell != cell:
                         pygame.draw.line(displayScreen,black,(x,y),(x+line_width,y+line_height),2)
                 if added:
-                    reds.append(red_cell)
+                    red_slants.append(red_cell)
             if not added:
                 for cell in cycle:
-                    reds.remove(cell)
-    
+                    red_slants.remove(cell)
+            
+    # show hints
+    for vertex in vertices:
+        pygame.draw.circle(displayScreen,lightpurple,(140 + int(spacex*vertex[0]),200 + int(spacey*vertex[1])),10,0)
+        pygame.draw.circle(displayScreen,black,(140 + int(spacex*vertex[0]),200 + int(spacey*vertex[1])),10,1)
+        fontTitle = pygame.font.SysFont('Arial', 20)
+        textTitle = fontTitle.render(str(vertices[vertex]),False,black)
+        textleft = 141 + int(spacex*vertex[0])-(textTitle.get_width()/2)
+        texttop = 200 + int(spacey*vertex[1])-(textTitle.get_height()/2)
+        displayScreen.blit(textTitle,(textleft,texttop))
+
     playing = True
     while playing:
-        for vertex in vertices:
-            pygame.draw.circle(displayScreen,lightpurple,(140 + int(spacex*vertex[0]),200 + int(spacey*vertex[1])),10,0)
-            pygame.draw.circle(displayScreen,black,(140 + int(spacex*vertex[0]),200 + int(spacey*vertex[1])),10,1)
-            fontTitle = pygame.font.SysFont('Arial', 20)
-            textTitle = fontTitle.render(str(vertices[vertex]),False,black)
-            textleft = 141 + int(spacex*vertex[0])-(textTitle.get_width()/2)
-            texttop = 200 + int(spacey*vertex[1])-(textTitle.get_height()/2)
-            displayScreen.blit(textTitle,(textleft,texttop))
-        
         for event in pygame.event.get():            
             if event.type ==pygame.QUIT:
                 playing = False
@@ -359,25 +408,35 @@ def play(size, diff):
                     # get box that was clicked
                     (i, j) = get_clicked_node(pos, 140, 200, spacex, spacey)
                     if player_grid[j][i] == 0:
-                        x = 145 + i*spacex
-                        y = 205 + j*spacey
+                        x = 147 + i*spacex
+                        y = 207 + j*spacey
                         pygame.draw.line(displayScreen,black,(x,y+line_height),(x+line_width,y),2)
                         player_grid[j][i] = 1
-                        check_cycles((i, j), True)                           
+                        # check for cycles
+                        check_cycles((i, j), True)   
+                        # check for too many lines
+                        check_hints((i, j), 1)                        
                     elif player_grid[j][i] == 1:
-                        x = 145 + i*spacex
-                        y = 205 + j*spacey
+                        x = 147 + i*spacex
+                        y = 207 + j*spacey
                         pygame.draw.line(displayScreen,lightpurple,(x,y+line_height),(x+line_width,y),3)
                         pygame.draw.line(displayScreen,black,(x,y),(x+line_width,y+line_height),2)
+                        # check if cycle was removed
                         check_cycles((i, j), False) 
                         player_grid[j][i] = 2
+                        # check for new cycles
                         check_cycles((i, j), True)
+                        # check for too many lines or if some hints were fixed
+                        check_hints((i, j), 2)
                     elif player_grid[j][i] == 2:
-                        x = 145 + i*spacex
-                        y = 205 + j*spacey
+                        x = 147 + i*spacex
+                        y = 207 + j*spacey
                         pygame.draw.line(displayScreen,lightpurple,(x,y),(x+line_width,y+line_height),3)
+                        # check if cycle was removed
                         check_cycles((i, j), False) 
                         player_grid[j][i] = 0
+                        # check if any hints were fixed
+                        check_hints((i, j), 0)
                 
         pygame.display.flip()
         
