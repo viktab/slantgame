@@ -205,11 +205,7 @@ def remove_vertices(size, vertices, diff):
         total_values = sum(value[x] for x in vertices.values()) - edge_values
         total_remaining = int(total_values*percent)
         remaining = total_remaining 
-        print(percent)
-        print(edges)
         edge_values = sum(value[x] for x in edges.values())
-        print(remaining)
-        print(edge_values)
         while not total_values <= remaining + edge_values:
             to_remove = random.choice(list(new_vertices.keys()))
             total_values -= value[new_vertices.pop(to_remove)]
@@ -301,17 +297,50 @@ def play(size, diff):
             player_vertices[(i, j)] -= 1
             player_vertices[(i+1, j+1)] -= 1
         
-        hints_copy = copy.deepcopy(red_hints)
+        more_copy = copy.deepcopy(hints_more)
+        less_copy = copy.deepcopy(hints_less)
         for m in range(i, i+2):
             for n in range(j, j+2):
-                # check if made a mistake
-                if player_vertices[(m, n)] > correct_vertices[(m, n)] and (m, n) not in hints_copy and (m, n) in vertices:
-                    red_hints.append((m, n))
-                # check if fixed a mistake
-                if player_vertices[(m, n)] == correct_vertices[(m, n)] and (m, n) in hints_copy and (m, n) in vertices:
-                    red_hints.remove((m, n))
+                # check too many slants coming out of the vertex
+                if player_vertices[(m, n)] > correct_vertices[(m, n)] and (m, n) not in more_copy and (m, n) in vertices:
+                    hints_more.append((m, n))
+                # check if fixed too many vertices coming out if it
+                if player_vertices[(m, n)] == correct_vertices[(m, n)] and (m, n) in more_copy and (m, n) in vertices:
+                    hints_more.remove((m, n))
+                # check if not enough vertices and all surrounding boxes filled
+                if m < size[0] and n < size[1]:
+                    if (m, n) not in hints_more and player_vertices[(m, n)] != correct_vertices[(m, n)] and (m, n) not in less_copy and (m, n) in vertices and \
+                    0 not in (player_grid[n][m], player_grid[n][m-1], player_grid[n-1][m], player_grid[n-1][m-1]):
+                        hints_less.append((m, n))
+                    if (m, n) not in hints_more and (m, n) in less_copy and (player_vertices[(m, n)] == correct_vertices[(m, n)] or \
+                        0 in (player_grid[n][m], player_grid[n][m-1], player_grid[n-1][m], player_grid[n-1][m-1])):
+                        hints_less.remove((m, n))
+                elif m < size[0]:
+
+                    if (m, n) not in hints_more and player_vertices[(m, n)] != correct_vertices[(m, n)] and (m, n) not in less_copy and (m, n) in vertices and \
+                    0 not in (player_grid[n-1][m-1], player_grid[n-1][m]):
+                        hints_less.append((m, n))
+                    if (m, n) not in hints_more and (m, n) in less_copy and (player_vertices[(m, n)] == correct_vertices[(m, n)] or \
+                        0 in (player_grid[n-1][m-1], player_grid[n-1][m])):
+                        hints_less.remove((m, n))
+                elif n < size[1]:
+
+                    if (m, n) not in hints_more and player_vertices[(m, n)] != correct_vertices[(m, n)] and (m, n) not in less_copy and (m, n) in vertices and \
+                    0 not in (player_grid[n-1][m-1], player_grid[n][m-1]):
+                        hints_less.append((m, n))
+                    if (m, n) not in hints_more and (m, n) in less_copy and (player_vertices[(m, n)] == correct_vertices[(m, n)] or \
+                        0 in (player_grid[n-1][m-1], player_grid[n][m-1])):
+                        hints_less.remove((m, n))
+                else:
+                    if (m, n) not in hints_more and player_vertices[(m, n)] != correct_vertices[(m, n)] and (m, n) not in less_copy and (m, n) in vertices and \
+                    0 != player_grid[n-1][m-1]:
+                        hints_less.append((m, n))
+                    if (m, n) not in hints_more and (m, n) in less_copy and (player_vertices[(m, n)] == correct_vertices[(m, n)] or \
+                        0 != player_grid[n-1][m-1]):
+                        hints_less.remove((m, n))
         # show updated red hints
-        for hint in red_hints:
+        all_hints = hints_more + hints_less
+        for hint in all_hints:
             pygame.draw.circle(displayScreen,lightpurple,(140 + int(spacex*hint[0]),200 + int(spacey*hint[1])),10,0)
             pygame.draw.circle(displayScreen,red,(140 + int(spacex*hint[0]),200 + int(spacey*hint[1])),10,1)
             fontTitle = pygame.font.SysFont('Arial', 20)
@@ -321,7 +350,7 @@ def play(size, diff):
             displayScreen.blit(textTitle,(textleft,texttop))
         # show updated black hints
         for vertex in vertices:
-            if vertex not in red_hints:
+            if vertex not in hints_more and vertex not in hints_less:
                 pygame.draw.circle(displayScreen,lightpurple,(140 + int(spacex*vertex[0]),200 + int(spacey*vertex[1])),10,0)
                 pygame.draw.circle(displayScreen,black,(140 + int(spacex*vertex[0]),200 + int(spacey*vertex[1])),10,1)
                 fontTitle = pygame.font.SysFont('Arial', 20)
@@ -329,39 +358,8 @@ def play(size, diff):
                 textleft = 141 + int(spacex*vertex[0])-(textTitle.get_width()/2)
                 texttop = 200 + int(spacey*vertex[1])-(textTitle.get_height()/2)
                 displayScreen.blit(textTitle,(textleft,texttop))
-    
-    # generate a board
-    grid = make_grid(size, diff)
-    correct_vertices = make_vertices(size, grid)
-    vertices = remove_vertices(size, correct_vertices, diff)
-    print(grid)
-    
-    # init game
-    player_grid = []
-    for i in range(size[1]):
-        player_grid.append([0]*size[0])
-    player_vertices = {}
-    for vertex in correct_vertices:
-        player_vertices[vertex] = 0
-        
-    # init constants 
-    spacex = 320/size[0]
-    spacey = 320/size[1]
-    line_width = spacex - 14
-    line_height = spacey - 14
-    red_slants = []
-    red_hints = []
-    
-    # draw board
-    displayScreen.fill(lightpurple)
-    for i in range(size[0]+1):
-        x = 140 + i*spacex
-        pygame.draw.line(displayScreen,black,(x,200),(x,520),2)
-    for i in range(size[1]+1):
-        y = 200 + i*spacey
-        pygame.draw.line(displayScreen,black,(140,y),(460,y),2)
-        
-    # func in game 
+                
+    # update red slants
     def check_cycles(cell, added):
         graph = make_graph(size, player_grid)
         cycle = cycles(graph, cell)
@@ -385,6 +383,38 @@ def play(size, diff):
             if not added:
                 for cell in cycle:
                     red_slants.remove(cell)
+                    
+    
+    # generate a board
+    grid = make_grid(size, diff)
+    correct_vertices = make_vertices(size, grid)
+    vertices = remove_vertices(size, correct_vertices, diff)
+    
+    # init game
+    player_grid = []
+    for i in range(size[1]):
+        player_grid.append([0]*size[0])
+    player_vertices = {}
+    for vertex in correct_vertices:
+        player_vertices[vertex] = 0
+        
+    # init constants 
+    spacex = 320/size[0]
+    spacey = 320/size[1]
+    line_width = spacex - 14
+    line_height = spacey - 14
+    red_slants = []
+    hints_more = []
+    hints_less = []
+    
+    # draw board
+    displayScreen.fill(lightpurple)
+    for i in range(size[0]+1):
+        x = 140 + i*spacex
+        pygame.draw.line(displayScreen,black,(x,200),(x,520),2)
+    for i in range(size[1]+1):
+        y = 200 + i*spacey
+        pygame.draw.line(displayScreen,black,(140,y),(460,y),2)
             
     # show hints
     for vertex in vertices:
