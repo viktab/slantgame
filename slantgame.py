@@ -567,6 +567,23 @@ def play(size, diff):
                         hints_less = all_hl[index+1]
                         index += 1
                         redraw()
+                elif in_button(pos,310,145,65,25):
+                    player_grid = []
+                    for i in range(size[1]):
+                        player_grid.append([0]*size[0])
+                    moves.append(copy.deepcopy(player_grid))
+                    red_slants = []
+                    hints_more = []
+                    hints_less = []
+                    all_rs.append(copy.deepcopy(red_slants))
+                    all_hm.append(copy.deepcopy(hints_more))
+                    all_hl.append(copy.deepcopy(hints_less))
+                    index += 1
+                    redraw()
+                elif in_button(pos,395,145,65,25):
+                    playing = False
+                    play(size, diff)
+                    
                 
         pygame.display.flip()
         
