@@ -217,7 +217,7 @@ def remove_vertices(size, vertices, diff):
         
     return new_vertices
 
-def solve():
+def solve(vertices):
     pass
 
 def start():
@@ -384,7 +384,49 @@ def play(size, diff):
                 for cell in cycle:
                     red_slants.remove(cell)
                     
+    # check if the player won
+    def check_won():
+        if len(red_slants) + len(hints_more) + len(hints_less) == 0:
+            for row in player_grid:
+                if 0 in row:
+                    return False
+            return True
+        return False
     
+    # redraw board when player clicks undo or redo
+    def redraw():
+        for i in range(size[0]):
+            for j in range(size[1]):
+                x = 147 + i*spacex
+                y = 207 + j*spacey
+                pygame.draw.line(displayScreen,lightpurple,(x,y+line_height),(x+line_width,y),3)
+                pygame.draw.line(displayScreen,lightpurple,(x,y),(x+line_width,y+line_height),3)
+                if player_grid[j][i] == 1:
+                    if (i, j) in red_slants:
+                        pygame.draw.line(displayScreen,red,(x,y+line_height),(x+line_width,y),2)
+                    else:
+                        pygame.draw.line(displayScreen,black,(x,y+line_height),(x+line_width,y),2)
+                elif player_grid[j][i] == 2:
+                    if (i, j) in red_slants:
+                        pygame.draw.line(displayScreen,red,(x,y),(x+line_width,y+line_height),2)
+                    else:
+                        pygame.draw.line(displayScreen,black,(x,y),(x+line_width,y+line_height),2)
+                        
+        all_reds = hints_more + hints_less
+        for hint in vertices:
+            if hint in all_reds:
+                colour = red
+            else:
+                colour = black
+            pygame.draw.circle(displayScreen,lightpurple,(140 + int(spacex*hint[0]),200 + int(spacey*hint[1])),10,0)
+            pygame.draw.circle(displayScreen,colour,(140 + int(spacex*hint[0]),200 + int(spacey*hint[1])),10,1)
+            fontTitle = pygame.font.SysFont('Arial', 20)
+            textTitle = fontTitle.render(str(correct_vertices[hint]),False,colour)
+            textleft = 141 + int(spacex*hint[0])-(textTitle.get_width()/2)
+            texttop = 200 + int(spacey*hint[1])-(textTitle.get_height()/2)
+            displayScreen.blit(textTitle,(textleft,texttop))
+                
+                    
     # generate a board
     grid = make_grid(size, diff)
     correct_vertices = make_vertices(size, grid)
@@ -406,6 +448,11 @@ def play(size, diff):
     red_slants = []
     hints_more = []
     hints_less = []
+    moves = [copy.deepcopy(player_grid)]
+    all_rs = [[]]
+    all_hm = [[]]
+    all_hl = [[]]
+    index = 0
     
     # draw board
     displayScreen.fill(lightpurple)
@@ -425,6 +472,29 @@ def play(size, diff):
         textleft = 141 + int(spacex*vertex[0])-(textTitle.get_width()/2)
         texttop = 200 + int(spacey*vertex[1])-(textTitle.get_height()/2)
         displayScreen.blit(textTitle,(textleft,texttop))
+        
+    # show buttons
+    pygame.draw.rect(displayScreen,black,(140,145,65,25),3)
+    fontTitle = pygame.font.SysFont('Helvetica', 16)
+    textTitle = fontTitle.render("Undo", False, black)
+    textleft = 140 + 32 - textTitle.get_width()/2
+    texttop = 145 + textTitle.get_height()/2
+    displayScreen.blit(textTitle,(textleft,texttop))
+    pygame.draw.rect(displayScreen,black,(225,145,65,25),3)
+    textTitle = fontTitle.render("Redo", False, black)
+    textleft = 225 + 32 - textTitle.get_width()/2
+    texttop = 145 + textTitle.get_height()/2
+    displayScreen.blit(textTitle,(textleft,texttop))
+    pygame.draw.rect(displayScreen,black,(310,145,65,25),3)
+    textTitle = fontTitle.render("Clear", False, black)
+    textleft = 310 + 32 - textTitle.get_width()/2
+    texttop = 145 + textTitle.get_height()/2
+    displayScreen.blit(textTitle,(textleft,texttop))
+    pygame.draw.rect(displayScreen,black,(395,145,65,25),3)
+    textTitle = fontTitle.render("New Game", False, black)
+    textleft = 395 + 32 - textTitle.get_width()/2
+    texttop = 145 + textTitle.get_height()/2
+    displayScreen.blit(textTitle,(textleft,texttop))
 
     playing = True
     while playing:
@@ -467,8 +537,41 @@ def play(size, diff):
                         player_grid[j][i] = 0
                         # check if any hints were fixed
                         check_hints((i, j), 0)
+                    if check_won():
+                        playing = False
+                        show_won()
+                    # update memory
+                    moves = moves[:index+1]
+                    all_rs = all_rs[:index+1]
+                    all_hm = all_hm[:index+1]
+                    all_hl = all_hl[:index+1]
+                    moves.append(copy.deepcopy(player_grid))
+                    all_rs.append(copy.deepcopy(red_slants))
+                    all_hm.append(copy.deepcopy(hints_more))
+                    all_hl.append(copy.deepcopy(hints_less))
+                    index = len(moves) - 1
+                # check if clicked any of the buttons
+                if in_button(pos,140,145,65,25):
+                    if len(moves) > 0:
+                        player_grid = moves[index-1]
+                        red_slants = all_rs[index-1]
+                        hints_more = all_hm[index-1]
+                        hints_less = all_hl[index-1]
+                        index -= 1
+                        redraw()
+                elif in_button(pos,225,145,65,25):
+                    if index < len(moves) - 1:
+                        player_grid = moves[index+1]
+                        red_slants = all_rs[index+1]
+                        hints_more = all_hm[index+1]
+                        hints_less = all_hl[index+1]
+                        index += 1
+                        redraw()
                 
         pygame.display.flip()
+        
+def show_won():
+    print('this bitch empty yEET')
         
 
 start()
