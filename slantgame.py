@@ -425,6 +425,30 @@ def play(size, diff):
             textleft = 141 + int(spacex*hint[0])-(textTitle.get_width()/2)
             texttop = 200 + int(spacey*hint[1])-(textTitle.get_height()/2)
             displayScreen.blit(textTitle,(textleft,texttop))
+            
+    # show a random hint
+    def display_hint():
+        found = False
+        while not found:
+            hidden = list(set(correct_vertices).symmetric_difference(set(vertices)))
+            new_vertex = random.choice(hidden)
+            check = []
+            i, j = new_vertex[0], new_vertex[1]
+            print(i, j)
+            if i > 0:
+                if j > 0:
+                    check.append(player_grid[j-1][i-1])
+                if j < size[1]:
+                    check.append(player_grid[j][i-1])
+            if i < size[0]:
+                if j > 0:
+                    check.append(player_grid[j-1][i])
+                if j < size[1]:
+                    check.append(player_grid[j][i])
+            if 0 in check:
+                found = True
+        vertices[new_vertex] = correct_vertices[new_vertex]
+        redraw()
                 
                     
     # generate a board
@@ -495,6 +519,17 @@ def play(size, diff):
     textleft = 395 + 32 - textTitle.get_width()/2
     texttop = 145 + textTitle.get_height()/2
     displayScreen.blit(textTitle,(textleft,texttop))
+    pygame.draw.rect(displayScreen,black,(140,540,65,25),3)
+    textTitle = fontTitle.render("Menu", False, black)
+    textleft = 140 + 32 - textTitle.get_width()/2
+    texttop = 540 + textTitle.get_height()/2
+    displayScreen.blit(textTitle,(textleft,texttop))
+    pygame.draw.rect(displayScreen,black,(395,540,65,25),3)
+    textTitle = fontTitle.render("Hint", False, black)
+    textleft = 395 + 32 - textTitle.get_width()/2
+    texttop = 540 + textTitle.get_height()/2
+    displayScreen.blit(textTitle,(textleft,texttop))
+    
 
     playing = True
     while playing:
@@ -583,8 +618,12 @@ def play(size, diff):
                 elif in_button(pos,395,145,65,25):
                     playing = False
                     play(size, diff)
+                elif in_button(pos,140,540,65,25):
+                    playing = False
+                    start()
+                elif in_button(pos,395,540,65,25):
+                    display_hint()
                     
-                
         pygame.display.flip()
         
 def show_won():
