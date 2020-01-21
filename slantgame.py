@@ -9,6 +9,7 @@ Created on Wed Jan 15 07:09:38 2020
 import pygame
 import random
 import copy
+from constraint_api import *
 
 pygame.init()
 pygame.display.set_caption("Slant Puzzle")
@@ -217,8 +218,54 @@ def remove_vertices(size, vertices, diff):
         
     return new_vertices
 
+def make_problem(size, grid, correct_vertices, diff):
+    variables = []
+    for i in range(size[0]):
+        for j in range(size[1]):
+            variables.append((i, j))
+    problem = ConstraintSatisfactionProblem(variables, grid, correct_vertices, correct_vertices)
+    for var in variables:
+        problem.set_domain(var, [1, 2])
+    # set up the constraints :((
+    
+    return problem
+
 def solve(vertices):
-    pass
+    # 1. init
+    extensions = 0
+    agenda = []
+    started = True
+    
+    while started or len(agenda) > 0:
+        started = False
+        
+        # 2. next var
+        if len(agenda) != 0:
+            problem = agenda.pop(0)
+        extensions += 1
+        
+        # 3. check if dead end
+        if has_empty_domains(problem) or not check_all_constraints(problem):
+            continue
+        
+        # 4. check if done
+        if len(problem.unassigned_vars) == 0:
+            return (problem.assignments, extensions)
+        
+        # 5. new problems
+        var = problem.pop_next_unassigned_var()
+        new_problems = []
+        for val in problem.get_domain(var):
+            new_problem = problem.copy()
+            new_problem.set_assignment(var, val)
+            # check enqueue condition
+            if enqueue_condition is not None:
+                propagate(enqueue_condition, new_problem, [var])
+            new_problems.append(new_problem)
+            
+        agenda = new_problems + agenda
+            
+    return(None, extensions)
 
 def start():
     playing = True
@@ -434,7 +481,6 @@ def play(size, diff):
             new_vertex = random.choice(hidden)
             check = []
             i, j = new_vertex[0], new_vertex[1]
-            print(i, j)
             if i > 0:
                 if j > 0:
                     check.append(player_grid[j-1][i-1])
@@ -454,6 +500,7 @@ def play(size, diff):
     # generate a board
     grid = make_grid(size, diff)
     correct_vertices = make_vertices(size, grid)
+    problem = make_problem(size, grid, correct_vertices, diff)
     vertices = remove_vertices(size, correct_vertices, diff)
     
     # init game
